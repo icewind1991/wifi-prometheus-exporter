@@ -7,6 +7,7 @@ use std::path::Path;
 use warp::Filter;
 use std::ffi::OsStr;
 use std::sync::Arc;
+use std::str::FromStr;
 
 struct WifiLister {
     session: Session
@@ -42,6 +43,7 @@ async fn main() -> Result<(), MainError> {
     let mut env: HashMap<String, String> = dotenv::vars().collect();
     let addr = env.remove("ADDR").ok_or("No ADDR set")?;
     let keyfile = env.remove("KEYFILE").ok_or("No KEYFILE set")?;
+    let port = env.get("PORT").and_then(|s| u16::from_str(s).ok()).unwrap_or(80);
 
     let wifi_listener = Arc::new(WifiLister::new(addr, &keyfile)?);
 
@@ -54,7 +56,7 @@ async fn main() -> Result<(), MainError> {
         });
 
     warp::serve(metrics)
-        .run(([127, 0, 0, 1], 3030u16))
+        .run(([0, 0, 0, 0], port))
         .await;
 
     Ok(())
