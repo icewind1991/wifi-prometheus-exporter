@@ -57,6 +57,13 @@ async fn main() -> Result<(), MainError> {
     let port = env.get("PORT").and_then(|s| u16::from_str(s).ok()).unwrap_or(80);
     let interfaces: Vec<&str> = env.get("INTERFACES").map(|interfaces| interfaces.split(' ').collect()).unwrap_or_default();
 
+    if interfaces.is_empty() {
+        println!("Listening on default interface");
+    } else {
+        println!("Listening on interfaces: {}", interfaces.join(", "));
+    }
+
+
     let wifi_listener = Arc::new(WifiLister::new(addr, &keyfile, &pubfile, &interfaces)?);
 
     // GET /hello/warp => 200 OK with body "Hello, warp!"
@@ -66,6 +73,10 @@ async fn main() -> Result<(), MainError> {
             let lines: Vec<_> = mac_addresses.into_iter().map(|mac| format!("wifi_client{{mac=\"{}\"}} 1", mac)).collect();
             lines.join("\n")
         });
+
+    ctrlc::set_handler(move || {
+        std::process::exit(0);
+    }).expect("Error setting Ctrl-C handler");
 
     warp::serve(metrics)
         .run(([0, 0, 0, 0], port))

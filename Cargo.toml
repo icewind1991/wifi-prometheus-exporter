@@ -12,3 +12,4 @@ dotenv = "0.15.0"
 main_error = "0.1.0"
 tokio = { version = "0.2", features = ["macros"] }
 warp = "0.2"
+ctrlc = "3.1.4"
