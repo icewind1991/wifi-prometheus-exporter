@@ -219,7 +219,7 @@ async fn send_update(
                     QoS::AtLeastOnce,
                     false,
                     format!(
-                        r#"{{"state_topic": "wifi-exporter/{mac}/state", "name": "Wifi device {mac}", " payload_available": "connected", " payload_not_available": "disconnected", "unique_id": "wifi-{mac}}}"#,
+                        r#"{{"state_topic": "wifi-exporter/{mac}/state", "name": "Wifi device {mac}", " payload_available": "connected", " payload_not_available": "disconnected", "unique_id": "wifi-{mac}"}}"#,
                         mac = mac
                     )
                 )
