@@ -219,9 +219,23 @@ async fn send_update(
                     QoS::AtLeastOnce,
                     false,
                     format!(
-                        r#"{{"state_topic": "wifi-exporter/{mac}/state", "name": "Wifi device {mac}", " payload_available": "connected", " payload_not_available": "disconnected", "unique_id": "wifi-{mac}"}}"#,
+                        r#"{{
+                            "state_topic": "wifi-exporter/{mac}/state",
+                            "device": {{
+                                "name": "Wifi device {mac}",
+                                "manufacturer": "Icewind",
+                                "model": "Wifi Tracker",
+                                "identifiers": "{mac}"
+                            }}
+                            "name": "Wifi device {mac}",
+                            "payload_home": "connected",
+                            "payload_not_home": "disconnected",
+                            "unique_id": "wifi-{mac}-connected",
+                            "icon": "mdi:wifi",
+                            "source_type": "router"
+                         }}"#,
                         mac = mac
-                    )
+                    ),
                 )
                 .await?;
             client
