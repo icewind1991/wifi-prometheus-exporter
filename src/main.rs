@@ -3,7 +3,7 @@ use rumqttc::{AsyncClient, ClientError, MqttOptions, QoS};
 use ssh2::{ErrorCode, Session};
 use std::collections::HashMap;
 use std::ffi::OsStr;
-use std::fmt::Write;
+use std::fmt::{Display, Formatter, Write};
 use std::io::prelude::*;
 use std::net::{TcpStream, ToSocketAddrs};
 use std::path::Path;
@@ -127,6 +127,17 @@ enum Update {
     Connected,
 }
 
+impl Display for Update {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Update::New => "discovered",
+            Update::Disconnected => "disconnected",
+            Update::Connected => "connected",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 impl DeviceStates {
     fn update(&mut self, new: Vec<String>) -> Vec<(String, Update)> {
         let mut updated = Vec::with_capacity(4);
@@ -191,8 +202,9 @@ async fn listener(
         match wifi_listener.list_connected_devices() {
             Ok(devices) => {
                 let updates = connected.lock().unwrap().update(devices);
-                if let Some(client) = client.as_mut() {
-                    for (mac, update) in updates {
+                for (mac, update) in updates {
+                    println!("{} {}", mac, update);
+                    if let Some(client) = client.as_mut() {
                         if let Err(e) = send_update(client, mac, update).await {
                             eprintln!("Error while sending mqtt update: {:?}", e);
                         }
@@ -226,7 +238,7 @@ async fn send_update(
                                 "manufacturer": "Icewind",
                                 "model": "Wifi Tracker",
                                 "identifiers": "{mac}"
-                            }}
+                            }},
                             "name": "Wifi device {mac}",
                             "payload_home": "connected",
                             "payload_not_home": "disconnected",
