@@ -22,5 +22,7 @@ jobs:
         with:
           push: true
           tags: icewind1991/wifi-prometheus-exporter:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
