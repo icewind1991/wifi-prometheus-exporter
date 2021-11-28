@@ -215,11 +215,11 @@ async fn send_update(
         Update::New => {
             client
                 .publish(
-                    format!("home-assistant/device_tracker/wifi-{}/config", mac),
+                    format!("homeassistant/device_tracker/wifi-{}/config", mac),
                     QoS::AtLeastOnce,
                     false,
                     format!(
-                        r#"{{"state_topic": "wifi-exporter/{mac}/state", "name": "Wifi device {mac}", "payload_home": "connected", "payload_not_home": "disconnected"}}"#,
+                        r#"{{"state_topic": "wifi-exporter/{mac}/state", "name": "Wifi device {mac}", " payload_available": "connected", " payload_not_available": "disconnected", "unique_id": "wifi-{mac}}}"#,
                         mac = mac
                     )
                 )
