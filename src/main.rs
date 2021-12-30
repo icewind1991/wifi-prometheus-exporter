@@ -250,14 +250,19 @@ async fn send_update(
                     ),
                 )
                 .await?;
-            client
-                .publish(
-                    format!("wifi-exporter/{}/state", mac),
-                    QoS::AtLeastOnce,
-                    false,
-                    r#"connected"#,
-                )
-                .await?;
+            let client = client.clone();
+            spawn(async move {
+                sleep(Duration::from_millis(1500)).await;
+                client
+                    .publish(
+                        format!("wifi-exporter/{}/state", mac),
+                        QoS::AtLeastOnce,
+                        false,
+                        r#"connected"#,
+                    )
+                    .await
+                    .ok();
+            });
         }
         Update::Connected => {
             client
