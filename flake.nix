@@ -116,7 +116,7 @@
                 ProtectProc = "noaccess";
                 SystemCallFilter = ["@system-service" "~@resources" "~@privileged"];
                 IPAddressDeny = "any";
-                IPAddressAllow = "192.168.0.0/16";
+                IPAddressAllow = ["192.168.0.0/16" "localhost"];
                 PrivateUsers = true;
                 ProcSubset = "pid";
               };

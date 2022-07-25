@@ -87,9 +87,13 @@ async fn main() -> Result<(), MainError> {
             let mut mqtt_options = MqttOptions::new("wifi-exporter", host, 1883);
             mqtt_options.set_keep_alive(Duration::from_secs(5));
             mqtt_options.set_credentials(user, pass);
+            println!("mqtt enabled");
             Some(mqtt_options)
         }
-        _ => None,
+        _ => {
+            println!("mqtt disabled");
+            None
+        }
     };
 
     if interfaces.is_empty() {
