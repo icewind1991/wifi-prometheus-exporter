@@ -66,7 +66,7 @@ impl WifiLister {
 
 #[tokio::main]
 async fn main() -> Result<(), MainError> {
-    let mut env: HashMap<String, String> = dotenv::vars().collect();
+    let mut env: HashMap<String, String> = dotenvy::vars().collect();
     let addr = env.remove("ADDR").ok_or("No ADDR set")?;
     let keyfile = env.remove("KEYFILE").ok_or("No KEYFILE set")?;
     let pubfile = env.remove("PUBFILE").ok_or("No PUBFILE set")?;
@@ -226,7 +226,7 @@ async fn send_update(
     mac: String,
     update: Update,
 ) -> Result<(), ClientError> {
-    let mac = mac.replace(":", "_");
+    let mac = mac.replace(':', "_");
     match update {
         Update::New => {
             client
