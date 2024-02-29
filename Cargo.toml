@@ -3,8 +3,7 @@ name = "wifi-prometheus-exporter"
 version = "0.1.0"
 authors = ["Robin Appelman <robin@icewind.nl>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 ssh2 = "0.9.4"
@@ -13,4 +12,11 @@ main_error = "0.1.2"
 tokio = { version = "1.36.0", features = ["macros", "rt-multi-thread"] }
 warp = "0.3.6"
 ctrlc = "3.4.2"
-rumqttc = "0.23.0"
+thiserror = "1.0.57"
+rumqttc = "0.24.0"
+serde = { version = "1.0.197", features = ["derive"] }
+toml = "0.8.10"
+secretfile = { version = "0.1.0" }
+clap = { version = "=4.4.18", features = ["derive"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"

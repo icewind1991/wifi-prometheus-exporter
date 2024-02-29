@@ -1,0 +1,13 @@
+[mqtt]
+hostname = "mqtt.example.com"
+username = "wifi-exporter"
+password_file = "/path/to/password"
+
+[exporter]
+port = 1234
+interfaces = ["eth1", "eth2"]
+
+[ssh]
+host = "accesspoint.example.com:22"
+key_file = "/path/to/ssh/key"
+pubkey_file = "/path/to/ssh/key.pub"

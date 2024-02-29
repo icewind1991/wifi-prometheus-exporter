@@ -1,109 +1,63 @@
+mod config;
+mod error;
+mod listener;
+
+use crate::config::Config;
+use crate::listener::WifiLister;
+use clap::Parser;
 use main_error::MainError;
 use rumqttc::{AsyncClient, ClientError, MqttOptions, QoS};
-use ssh2::{ErrorCode, Session};
 use std::collections::HashMap;
-use std::ffi::OsStr;
 use std::fmt::{Display, Formatter, Write};
-use std::io::prelude::*;
-use std::net::{TcpStream, ToSocketAddrs};
-use std::path::Path;
-use std::str::FromStr;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::{spawn, time::sleep};
+use tracing::{error, info};
 use warp::Filter;
 
-struct WifiLister {
-    command: String,
-    session: Session,
-}
-
-impl WifiLister {
-    pub fn new<A: ToSocketAddrs, Priv: AsRef<OsStr>, Pub: AsRef<OsStr>>(
-        addr: A,
-        keyfile: Priv,
-        pubkey: Pub,
-        interfaces: &[&str],
-    ) -> Result<Self, MainError> {
-        let tcp = TcpStream::connect(addr)?;
-        let mut session = Session::new()?;
-        session.set_tcp_stream(tcp);
-        session.handshake()?;
-        let keyfile = Path::new(keyfile.as_ref());
-        let pubkey = Path::new(pubkey.as_ref());
-        session.userauth_pubkey_file("admin", Some(pubkey), keyfile, None)?;
-
-        let command = if interfaces.is_empty() {
-            "wl assoclist".to_string()
-        } else {
-            let commands: Vec<String> = interfaces
-                .iter()
-                .map(|interface| format!("wl -a {} assoclist", interface))
-                .collect();
-            commands.join(" && ")
-        };
-
-        Ok(WifiLister { session, command })
-    }
-
-    pub fn list_connected_devices(&self) -> Result<Vec<String>, ssh2::Error> {
-        let mut channel = self.session.channel_session()?;
-        channel.exec(&self.command)?;
-        let mut s = String::new();
-        channel.read_to_string(&mut s).map_err(|e| {
-            ssh2::Error::new(
-                ErrorCode::Session(e.raw_os_error().unwrap_or_default()),
-                "error reading from ssh stream",
-            )
-        })?;
-        channel.wait_close()?;
-
-        Ok(s.lines()
-            .map(|s| s.trim_start_matches("assoclist ").to_string())
-            .collect())
-    }
+#[derive(Parser, Debug)]
+struct Args {
+    /// Path to config file
+    config: PathBuf,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), MainError> {
-    let mut env: HashMap<String, String> = dotenvy::vars().collect();
-    let addr = env.remove("ADDR").ok_or("No ADDR set")?;
-    let keyfile = env.remove("KEYFILE").ok_or("No KEYFILE set")?;
-    let pubfile = env.remove("PUBFILE").ok_or("No PUBFILE set")?;
-    let port = env
-        .get("PORT")
-        .and_then(|s| u16::from_str(s).ok())
-        .unwrap_or(80);
-    let mqtt_host = env.remove("MQTT_HOSTNAME");
-    let mqtt_user = env.remove("MQTT_USERNAME");
-    let mqtt_pass = env.remove("MQTT_PASSWORD");
-    let interfaces: Vec<&str> = env
-        .get("INTERFACES")
-        .map(|interfaces| interfaces.split(' ').collect())
-        .unwrap_or_default();
-
-    let mqtt_options = match (mqtt_host, mqtt_user, mqtt_pass) {
-        (Some(host), Some(user), Some(pass)) => {
-            let mut mqtt_options = MqttOptions::new("wifi-exporter", host, 1883);
+    tracing_subscriber::fmt::init();
+    let args = Args::parse();
+    let config = Config::load(&args.config)?;
+    let mqtt_options = match &config.mqtt {
+        Some(mqtt_config) => {
+            let mut mqtt_options =
+                MqttOptions::new("wifi-exporter", &mqtt_config.hostname, mqtt_config.port);
             mqtt_options.set_keep_alive(Duration::from_secs(5));
-            mqtt_options.set_credentials(user, pass);
-            println!("mqtt enabled");
+            mqtt_options.set_credentials(&mqtt_config.username, mqtt_config.password()?);
+            info!("mqtt enabled");
             Some(mqtt_options)
         }
         _ => {
-            println!("mqtt disabled");
+            info!("mqtt disabled");
             None
         }
     };
 
-    if interfaces.is_empty() {
-        println!("Listening on default interface");
+    if config.exporter.interfaces.is_empty() {
+        info!("Listening on default interface");
     } else {
-        println!("Listening on interfaces: {}", interfaces.join(", "));
+        info!(
+            "Listening on interfaces: {}",
+            config.exporter.interfaces.join(", ")
+        );
     }
 
     let connected: Arc<Mutex<DeviceStates>> = Default::default();
-    let wifi_listener = WifiLister::new(addr, &keyfile, &pubfile, &interfaces)?;
+    let wifi_listener = WifiLister::new(
+        &config.ssh.address,
+        &config.ssh.key()?,
+        &config.ssh.pubkey()?,
+        &config.exporter.interfaces,
+    )?;
 
     spawn(listener(wifi_listener, connected.clone(), mqtt_options));
 
@@ -114,7 +68,9 @@ async fn main() -> Result<(), MainError> {
     })
     .expect("Error setting Ctrl-C handler");
 
-    warp::serve(metrics).run(([0, 0, 0, 0], port)).await;
+    warp::serve(metrics)
+        .run((config.exporter.address, config.exporter.port))
+        .await;
 
     Ok(())
 }
@@ -207,15 +163,15 @@ async fn listener(
             Ok(devices) => {
                 let updates = connected.lock().unwrap().update(devices);
                 for (mac, update) in updates {
-                    println!("{} {}", mac, update);
+                    info!(mac, %update, "change detected");
                     if let Some(client) = client.as_mut() {
                         if let Err(e) = send_update(client, mac, update).await {
-                            eprintln!("Error while sending mqtt update: {:?}", e);
+                            error!(e = ?e, "Error while sending mqtt update: {e}");
                         }
                     }
                 }
             }
-            Err(e) => eprintln!("Error while listing devices {:#?}", e),
+            Err(e) => error!(e = ?e, "Error while listing devices {e}"),
         }
         sleep(Duration::from_secs(5)).await;
     }

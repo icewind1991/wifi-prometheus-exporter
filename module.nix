@@ -6,23 +6,67 @@
 }:
 with lib; let
   cfg = config.services.wifi-prometheus-exporter;
+  format = pkgs.formats.toml {};
+  configFile = format.generate "wifi-prometheus-exporter-config.toml" {
+    ssh = {
+      inherit (cfg.ssh) address;
+      key_file = "$CREDENTIALS_DIRECTORY/ssh_key";
+      pubkey_file = "$CREDENTIALS_DIRECTORY/ssh_pub_key";
+    };
+    exporter = {
+      inherit (cfg) interfaces port;
+    };
+    mqtt = {
+      inherit (cfg.mqtt) hostname port username;
+      password_file = "$CREDENTIALS_DIRECTORY/mqtt_password";
+    };
+  };
+
 in {
   options.services.wifi-prometheus-exporter = {
     enable = mkEnableOption "WiFi prometheus exporter";
 
-    sshAddress = mkOption {
-      type = types.str;
-      description = "ssh address of the wifi access point";
+    ssh = mkOption {
+      type = types.submodule {
+        options = {
+          address = mkOption {
+            type = types.str;
+            description = "ssh address of the access point";
+          };
+          keyFile = mkOption {
+            type = types.str;
+            description = "path to ssh key file";
+          };
+          pubKeyFile = mkOption {
+            type = types.str;
+            description = "path to ssh public key";
+          };
+        };
+      };
     };
 
-    sshKeyFile = mkOption {
-      type = types.str;
-      description = "path containing the ssh private key";
-    };
-
-    sshPubKeyFile = mkOption {
-      type = types.str;
-      description = "path containing the ssh public key";
+    mqtt = mkOption {
+      type = types.submodule {
+        options = {
+          hostname = mkOption {
+            type = types.str;
+            description = "mqtt server hostname";
+          };
+          port = mkOption {
+            type = types.port;
+            description = "mqtt server port";
+            default = 1883;
+          };
+          username = mkOption {
+            type = types.str;
+            description = "mqtt username";
+          };
+          passwordFile = mkOption {
+            type = types.str;
+            description = "path containing the mqtt password";
+          };
+        };
+      };
     };
 
     interfaces = mkOption {
@@ -36,15 +80,16 @@ in {
       description = "port to listen to";
     };
 
-    mqttSecretFile = mkOption {
-      type = types.str;
-      description = "path containing MQTT_HOSTNAME, MQTT_USERNAME and MQTT_PASSWORD environment variables";
-    };
-
     package = mkOption {
       type = types.package;
       defaultText = literalExpression "pkgs.dispenser";
       description = "package to use";
+    };
+
+    log = mkOption {
+      type = types.str;
+      description = "log level";
+      default = "info";
     };
   };
 
@@ -52,16 +97,16 @@ in {
     systemd.services."wifi-prometheus-exporter" = {
       wantedBy = ["multi-user.target"];
       environment = {
-        PORT = toString cfg.port;
-        ADDR = cfg.sshAddress;
-        KEYFILE = cfg.sshKeyFile;
-        PUBFILE = cfg.sshPubKeyFile;
-        INTERFACES = concatStringsSep " " cfg.interfaces;
+        RUST_LOG = cfg.log;
       };
 
       serviceConfig = {
-        ExecStart = "${pkgs.wifi-prometheus-exporter}/bin/wifi-prometheus-exporter";
-        EnvironmentFile = cfg.mqttSecretFile;
+        ExecStart = "${pkgs.wifi-prometheus-exporter}/bin/wifi-prometheus-exporter ${configFile}";
+        LoadCredential = [
+          "ssh_key:${cfg.ssh.keyFile}"
+          "ssh_pub_key:${cfg.ssh.pubKeyFile}"
+          "mqtt_password:${cfg.mqtt.passwordFile}"
+        ];
         Restart = "on-failure";
         DynamicUser = true;
         PrivateTmp = true;
