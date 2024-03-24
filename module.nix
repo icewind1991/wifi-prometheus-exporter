@@ -108,6 +108,7 @@ in {
           "mqtt_password:${cfg.mqtt.passwordFile}"
         ];
         Restart = "on-failure";
+        RestartSec = "30s";
         DynamicUser = true;
         PrivateTmp = true;
         ProtectSystem = "strict";
