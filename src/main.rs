@@ -12,7 +12,7 @@ use std::fmt::{Display, Formatter, Write};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use tokio::{spawn, time::sleep};
+use tokio::{select, spawn, time::sleep};
 use tracing::{error, info};
 use warp::Filter;
 
@@ -59,7 +59,7 @@ async fn main() -> Result<(), MainError> {
         &config.exporter.interfaces,
     )?;
 
-    spawn(listener(wifi_listener, connected.clone(), mqtt_options));
+    let listen = listener(wifi_listener, connected.clone(), mqtt_options);
 
     let metrics = warp::path!("metrics").map(move || connected.lock().unwrap().format());
 
@@ -68,9 +68,14 @@ async fn main() -> Result<(), MainError> {
     })
     .expect("Error setting Ctrl-C handler");
 
-    warp::serve(metrics)
-        .run((config.exporter.address, config.exporter.port))
-        .await;
+    let serve = warp::serve(metrics).run((config.exporter.address, config.exporter.port));
+
+    select! {
+        _ = serve => (),
+        res = listen =>  {
+            return res.map_err(MainError::from);
+        },
+    }
 
     Ok(())
 }
@@ -144,7 +149,8 @@ async fn listener(
     wifi_listener: WifiLister,
     connected: Arc<Mutex<DeviceStates>>,
     mqtt_options: Option<MqttOptions>,
-) {
+) -> Result<(), ssh2::Error> {
+    let mut error_count = 0;
     let mut client = match mqtt_options {
         Some(mqtt_options) => {
             let (client, mut eventloop) = AsyncClient::new(mqtt_options, 10);
@@ -161,6 +167,7 @@ async fn listener(
     loop {
         match wifi_listener.list_connected_devices() {
             Ok(devices) => {
+                error_count = 1;
                 let updates = connected.lock().unwrap().update(devices);
                 for (mac, update) in updates {
                     info!(mac, %update, "change detected");
@@ -171,7 +178,13 @@ async fn listener(
                     }
                 }
             }
-            Err(e) => error!(e = ?e, "Error while listing devices {e}"),
+            Err(e) => {
+                error_count += 1;
+                error!(e = ?e, "Error while listing devices {e}");
+                if error_count >= 5 {
+                    return Err(e);
+                }
+            }
         }
         sleep(Duration::from_secs(5)).await;
     }
