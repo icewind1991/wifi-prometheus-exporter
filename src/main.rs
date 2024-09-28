@@ -202,7 +202,7 @@ async fn send_update(
                 .publish(
                     format!("homeassistant/device_tracker/wifi-{}/config", mac),
                     QoS::AtLeastOnce,
-                    false,
+                    true,
                     format!(
                         r#"{{
                             "state_topic": "wifi-exporter/{mac}/state",
@@ -225,12 +225,11 @@ async fn send_update(
                 .await?;
             let client = client.clone();
             spawn(async move {
-                sleep(Duration::from_millis(1500)).await;
                 client
                     .publish(
                         format!("wifi-exporter/{}/state", mac),
                         QoS::AtLeastOnce,
-                        false,
+                        true,
                         r#"connected"#,
                     )
                     .await
@@ -242,7 +241,7 @@ async fn send_update(
                 .publish(
                     format!("wifi-exporter/{}/state", mac),
                     QoS::AtLeastOnce,
-                    false,
+                    true,
                     r#"connected"#,
                 )
                 .await?;
@@ -252,7 +251,7 @@ async fn send_update(
                 .publish(
                     format!("wifi-exporter/{}/state", mac),
                     QoS::AtLeastOnce,
-                    false,
+                    true,
                     r#"disconnected"#,
                 )
                 .await?;
