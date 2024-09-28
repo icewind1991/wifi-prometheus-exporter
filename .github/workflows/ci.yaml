@@ -1,9 +1,10 @@
-on: [ push, pull_request ]
-
-name: CI
+name: "CI"
+on:
+  pull_request:
+  push:
 
 jobs:
-  build:
+  checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -12,5 +13,5 @@ jobs:
         with:
           name: ci
           instance: https://cache.icewind.me
-          authToken: '${{ secrets.ATTIC_TOKEN }}'
-      - run: nix build
+          authToken: "${{ secrets.ATTIC_TOKEN }}"
+      - run: nix flake check --keep-going

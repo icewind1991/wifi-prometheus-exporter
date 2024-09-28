@@ -1,12 +1,11 @@
-{
-  config,
-  lib,
-  pkgs,
-  ...
+{ config
+, lib
+, pkgs
+, ...
 }:
 with lib; let
   cfg = config.services.wifi-prometheus-exporter;
-  format = pkgs.formats.toml {};
+  format = pkgs.formats.toml { };
   configFile = format.generate "wifi-prometheus-exporter-config.toml" {
     ssh = {
       inherit (cfg.ssh) address;
@@ -22,7 +21,8 @@ with lib; let
     };
   };
 
-in {
+in
+{
   options.services.wifi-prometheus-exporter = {
     enable = mkEnableOption "WiFi prometheus exporter";
 
@@ -95,7 +95,7 @@ in {
 
   config = mkIf cfg.enable {
     systemd.services."wifi-prometheus-exporter" = {
-      wantedBy = ["multi-user.target"];
+      wantedBy = [ "multi-user.target" ];
       environment = {
         RUST_LOG = cfg.log;
       };
@@ -129,9 +129,9 @@ in {
         RestrictAddressFamilies = "AF_INET AF_INET6";
         RestrictRealtime = true;
         ProtectProc = "noaccess";
-        SystemCallFilter = ["@system-service" "~@resources" "~@privileged"];
+        SystemCallFilter = [ "@system-service" "~@resources" "~@privileged" ];
         IPAddressDeny = "any";
-        IPAddressAllow = ["192.168.0.0/16" "localhost"];
+        IPAddressAllow = [ "192.168.0.0/16" "localhost" ];
         PrivateUsers = true;
         ProcSubset = "pid";
       };

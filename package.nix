@@ -1,29 +1,30 @@
-{
-  rustPlatform,
-  openssl,
-  pkg-config,
-  lib,
-}: let
+{ rustPlatform
+, openssl
+, pkg-config
+, lib
+,
+}:
+let
   inherit (lib.sources) sourceByRegex;
-  src = sourceByRegex ./. ["Cargo.*" "(src)(/.*)?"];
+  src = sourceByRegex ./. [ "Cargo.*" "(src)(/.*)?" ];
 in
-  rustPlatform.buildRustPackage rec {
-    pname = "wifi-prometheus-exporter";
-    version = "0.1.0";
+rustPlatform.buildRustPackage rec {
+  pname = "wifi-prometheus-exporter";
+  version = "0.1.0";
 
-    inherit src;
+  inherit src;
 
-    buildInputs = [
-      openssl
-    ];
+  buildInputs = [
+    openssl
+  ];
 
-    nativeBuildInputs = [
-      pkg-config
-    ];
+  nativeBuildInputs = [
+    pkg-config
+  ];
 
-    doCheck = false;
+  doCheck = false;
 
-    cargoLock = {
-      lockFile = ./Cargo.lock;
-    };
-  }
+  cargoLock = {
+    lockFile = ./Cargo.lock;
+  };
+}
