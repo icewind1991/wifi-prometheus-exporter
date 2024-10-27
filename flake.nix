@@ -21,9 +21,9 @@
         , ...
         }: {
           imports = [ ./module.nix ];
-          config = lib.mkIf config.services.wifi-prometheus-exporter.enable {
+          config = {
             nixpkgs.overlays = [ outputs.overlays.default ];
-            services.wifi-prometheus-exporter.package = lib.mkDefault pkgs.wifi-prometheus-exporter;
+            services.prometheus.exporters.wifi.package = lib.mkDefault pkgs.wifi-prometheus-exporter;
           };
         };
     };

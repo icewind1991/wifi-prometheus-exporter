@@ -4,7 +4,7 @@
 , ...
 }:
 with lib; let
-  cfg = config.services.wifi-prometheus-exporter;
+  cfg = config.services.prometheus.exporters.wifi;
   format = pkgs.formats.toml { };
   configFile = format.generate "wifi-prometheus-exporter-config.toml" {
     ssh = {
@@ -23,7 +23,7 @@ with lib; let
 
 in
 {
-  options.services.wifi-prometheus-exporter = {
+  options.services.prometheus.exporters.wifi = {
     enable = mkEnableOption "WiFi prometheus exporter";
 
     ssh = mkOption {
