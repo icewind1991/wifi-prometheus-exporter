@@ -13,6 +13,7 @@ pub struct WifiLister {
 impl WifiLister {
     pub fn new<A: ToSocketAddrs + Debug>(
         addr: A,
+        user: &str,
         key: &str,
         pubkey: &str,
         interfaces: &[String],
@@ -23,18 +24,14 @@ impl WifiLister {
         session.set_tcp_stream(tcp);
         session.handshake().map_err(Error::SshSession)?;
         session
-            .userauth_pubkey_memory("admin", Some(pubkey), key, None)
+            .userauth_pubkey_memory(user, Some(pubkey), key, None)
             .map_err(Error::SshAuth)?;
 
-        let command = if interfaces.is_empty() {
-            "wl assoclist".to_string()
-        } else {
-            let commands: Vec<String> = interfaces
-                .iter()
-                .map(|interface| format!("wl -a {} assoclist", interface))
-                .collect();
-            commands.join(" && ")
-        };
+        let commands: Vec<String> = interfaces
+            .iter()
+            .map(|interface| format!("iw dev {} station dump", interface))
+            .collect();
+        let command = commands.join(" && ");
 
         info!("ssh connected");
 
@@ -55,7 +52,9 @@ impl WifiLister {
         channel.wait_close()?;
 
         Ok(s.lines()
-            .map(|s| s.trim_start_matches("assoclist ").to_string())
+            .filter(|s| s.starts_with("Station"))
+            .filter_map(|s| s.split(' ').nth(1))
+            .map(String::from)
             .collect())
     }
 }

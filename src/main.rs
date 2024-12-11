@@ -43,7 +43,8 @@ async fn main() -> Result<(), MainError> {
     };
 
     if config.exporter.interfaces.is_empty() {
-        info!("Listening on default interface");
+        error!("No interfaces specified");
+        return Ok(());
     } else {
         info!(
             "Listening on interfaces: {}",
@@ -54,6 +55,7 @@ async fn main() -> Result<(), MainError> {
     let connected: Arc<Mutex<DeviceStates>> = Default::default();
     let wifi_listener = WifiLister::new(
         &config.ssh.address,
+        &config.ssh.user,
         &config.ssh.key()?,
         &config.ssh.pubkey()?,
         &config.exporter.interfaces,

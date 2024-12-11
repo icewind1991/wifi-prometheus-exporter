@@ -8,7 +8,7 @@ with lib; let
   format = pkgs.formats.toml { };
   configFile = format.generate "wifi-prometheus-exporter-config.toml" {
     ssh = {
-      inherit (cfg.ssh) address;
+      inherit (cfg.ssh) address user;
       key_file = "$CREDENTIALS_DIRECTORY/ssh_key";
       pubkey_file = "$CREDENTIALS_DIRECTORY/ssh_pub_key";
     };
@@ -32,6 +32,10 @@ in
           address = mkOption {
             type = types.str;
             description = "ssh address of the access point";
+          };
+          user = mkOption {
+            type = types.str;
+            description = "ssh user";
           };
           keyFile = mkOption {
             type = types.str;

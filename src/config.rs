@@ -41,6 +41,7 @@ impl MqttConfig {
 #[derive(Debug, Deserialize)]
 pub struct SshConfig {
     pub address: String,
+    pub user: String,
     pubkey_file: String,
     key_file: String,
 }
