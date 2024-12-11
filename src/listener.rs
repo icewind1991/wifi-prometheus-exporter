@@ -15,7 +15,7 @@ impl WifiLister {
         addr: A,
         user: &str,
         key: &str,
-        pubkey: &str,
+        pub_key: &str,
         interfaces: &[String],
     ) -> Result<Self, Error> {
         debug!(address = ?addr, "connecting to ssh");
@@ -24,7 +24,7 @@ impl WifiLister {
         session.set_tcp_stream(tcp);
         session.handshake().map_err(Error::SshSession)?;
         session
-            .userauth_pubkey_memory(user, Some(pubkey), key, None)
+            .userauth_pubkey_memory(user, Some(pub_key), key, None)
             .map_err(Error::SshAuth)?;
 
         let commands: Vec<String> = interfaces
