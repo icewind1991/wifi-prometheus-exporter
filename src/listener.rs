@@ -54,7 +54,7 @@ impl WifiLister {
         Ok(s.lines()
             .filter(|s| s.starts_with("Station"))
             .filter_map(|s| s.split(' ').nth(1))
-            .map(String::from)
+            .map(str::to_ascii_uppercase)
             .collect())
     }
 }
